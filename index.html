@@ -172,6 +172,28 @@ body[data-mode=nav] #hud{display:flex;align-items:center;gap:14px;padding:12px 1
 #boot div.ln:nth-of-type(3){animation-delay:1s}#boot div.ln:nth-of-type(4){animation-delay:1.4s}
 @keyframes ln{to{opacity:1}}
 .okc{color:var(--y)}
+
+/* сохранённые места */
+.svbtn{background:none;border:0;color:var(--y);display:flex;flex-direction:column;align-items:center;gap:2px;font:600 12px 'Rajdhani';letter-spacing:.03em;flex:none;padding:2px 0 2px 4px;min-width:66px}
+.svbtn svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round}
+.svbtn.on svg{fill:currentColor}
+#favs{font-size:24px;font-family:inherit}
+body[data-mode=nav] #favs{display:none}
+#modal{position:fixed;inset:0;z-index:80;display:none;background:rgba(5,9,13,.78);padding:calc(var(--st) + 70px) 14px 14px;align-items:flex-start}
+#modal.show{display:flex}
+.mbox{width:100%;padding:18px;max-height:calc(100% - 10px);display:flex;flex-direction:column;gap:14px}
+.mt{font:700 20px 'Rajdhani';letter-spacing:.14em;color:var(--y)}
+#mname{width:100%;height:52px;background:rgba(110,232,222,.07);border:1px solid var(--ln);color:var(--c);font:600 20px 'Rajdhani';padding:0 14px;outline:0;border-radius:0}
+.mrow2{display:flex;gap:10px}
+.mrow2 .btn{flex:1;width:auto}
+.btn.alt{background:transparent;color:var(--c);box-shadow:inset 0 0 0 2px var(--c);clip-path:none}
+.flist{overflow:auto;display:flex;flex-direction:column;min-height:0}
+.fav{display:flex;align-items:center;gap:4px;border-bottom:1px solid rgba(110,232,222,.14);padding:4px 0}
+.fmain{flex:1;min-width:0;padding:6px 4px}
+.fn{font:700 20px 'Rajdhani';color:var(--c);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fs{font:500 14px 'Rajdhani';color:#7d9ea3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fb{width:44px;height:44px;background:none;border:0;color:#8fb5ba;font-size:20px}
+.fnone{color:#7d9ea3;font:14px/1.5 'Share Tech Mono',monospace;padding:6px 0}
 </style>
 </head>
 <body data-mode="idle" data-track="off">
@@ -219,6 +241,7 @@ body[data-mode=nav] #hud{display:flex;align-items:center;gap:14px;padding:12px 1
     <svg viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="14" cy="14" r="7"/><circle cx="14" cy="14" r="2.2" fill="currentColor"/><path d="M14 2v5M14 21v5M2 14h5M21 14h5" stroke-linecap="round"/></svg>
     <span id="locTag"></span>
   </button>
+  <button class="sb" id="favs" aria-label="Сохранённые места">★</button>
   <button class="sb" id="sim">SIM</button>
 </div>
 
@@ -226,10 +249,11 @@ body[data-mode=nav] #hud{display:flex;align-items:center;gap:14px;padding:12px 1
   <div class="drow">
     <div class="pin"><svg viewBox="0 0 24 24" fill="#f5e663"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.500a2.500 2.500 0 0 1 0 5z"/></svg></div>
     <div class="dn"><div id="pName">—</div><div id="pSub"></div></div>
+    <button class="svbtn" id="saveBtn"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4.500L6 21z"/></svg><span>Сохранить</span></button>
   </div>
   <div class="stat"><span id="pMin">—</span><span id="pKm"></span></div>
   <div id="pWarn"></div>
-  <button class="btn" id="go">▲&nbsp; Начать навигацию</button>
+  <button class="btn" id="go">▲&nbsp; Ехала?</button>
 </footer>
 
 <footer id="hud" class="panel">
@@ -242,6 +266,7 @@ body[data-mode=nav] #hud{display:flex;align-items:center;gap:14px;padding:12px 1
 </footer>
 
 <div id="toast"></div>
+<div id="modal"></div>
 
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js" crossorigin="anonymous"></script>
 <script>
@@ -318,7 +343,8 @@ function hav(a,b){const dLat=(b[1]-a[1])*rad,dLng=(b[0]-a[0])*rad;const s=Math.s
 function bearing(a,b){const dl=(b[0]-a[0])*rad;const y=Math.sin(dl)*Math.cos(b[1]*rad);const x=Math.cos(a[1]*rad)*Math.sin(b[1]*rad)-Math.sin(a[1]*rad)*Math.cos(b[1]*rad)*Math.cos(dl);return (Math.atan2(y,x)/rad+360)%360;}
 function fmtDist(m){if(m<1000)return(m<30?Math.round(m):Math.round(m/10)*10)+' м';return(m/1000).toFixed(m<10000?1:0)+' км';}
 function fmtTime(s){const m=Math.max(1,Math.round(s/60));if(m<60)return m+' мин';return Math.floor(m/60)+' ч '+String(m%60).padStart(2,'0')+' мин';}
-let toastT;function toast(t){const el=$('#toast');el.textContent=t;el.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('show'),2800);}
+let toastT;function toast(t,ms=2800){const el=$('#toast');el.textContent=t;el.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('show'),ms);}
+function hideToast(){clearTimeout(toastT);$('#toast').classList.remove('show');}
 function syncStack(){
   const el=state.mode==='preview'?$('#preview'):state.mode==='nav'?$('#hud'):$('#searchWrap');
   document.documentElement.style.setProperty('--stack',(el?el.offsetHeight+12:0)+'px');
@@ -331,7 +357,7 @@ function setTrack(t){
 }
 
 /* ============ СОСТОЯНИЕ ============ */
-const state={mode:'idle',pos:null,heading:0,speed:0,dest:null,track:'off',voice:true,sim:false,simSpeed:16,spoken:{},lastReroute:0,rerouting:false,centered:false};
+const state={mode:'idle',pos:null,heading:0,speed:0,dest:null,track:'off',sim:false,simSpeed:16,lastReroute:0,rerouting:false,centered:false};
 let R=null,uidc=0;
 
 /* ============ КАРТА ============ */
@@ -509,15 +535,15 @@ async function startPreview(d){
   state.dest=d;
   destMarker.setLngLat([d.lng,d.lat]).addTo(map);
   const from=state.pos||map.getCenter().toArray();
-  toast('Строю маршрут...');
+  toast('Джонни прокладывает дорогу',40000);
   try{
-    const r=await fetchRoute(from,[d.lng,d.lat]);
-    R=r;state.idx=0;state.spoken={};
+    const r=await fetchRoute(from,[d.lng,d.lat]);hideToast();
+    R=r;state.idx=0;
     drawRoute(r);setTrack('off');
     $('#pName').textContent=d.name;$('#pSub').textContent=d.sub||'';
     $('#pMin').textContent=fmtTime(r.dur);$('#pKm').textContent='· '+fmtDist(r.dist);
     const w=$('#pWarn');w.style.display=state.pos?'none':'block';w.textContent='⚠ GPS НЕТ: СТАРТ С ЦЕНТРА КАРТЫ';
-    setMode('preview');
+    refreshSave();setMode('preview');
     const b=new maplibregl.LngLatBounds();r.coords.forEach(c=>b.extend(c));
     map.fitBounds(b,{padding:{top:130,bottom:330,left:40,right:80},pitch:0,bearing:0,duration:1000});
   }catch(e){toast('Маршрут не найден');}
@@ -605,17 +631,12 @@ let wl=null;
 async function lockScreen(){try{if(navigator.wakeLock)wl=await navigator.wakeLock.request('screen');}catch(e){}}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&state.mode==='nav')lockScreen();});
 
-function say(t){
-  if(!state.voice||!('speechSynthesis' in window))return;
-  try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang='ru-RU';u.rate=1.05;speechSynthesis.speak(u);}catch(e){}
-}
 
 $('#go').onclick=()=>{
   if(!R)return;
   setMode('nav');setTrack('head');
-  state.idx=0;state.spoken={};laneSig='';
+  state.idx=0;laneSig='';
   lockScreen();
-  say('Навигация запущена');
   if(state.sim)startSim();
   if(state.pos)onFix(state.pos[0],state.pos[1],state.heading,state.speed,5);else{
     const p=R.coords[0];onFix(p[0],p[1],bearing(R.coords[0],R.coords[Math.min(5,R.coords.length-1)]),0,50);
@@ -625,7 +646,6 @@ $('#go').onclick=()=>{
 $('#end').onclick=()=>{endNav();};
 function endNav(){
   stopSim();if(wl){try{wl.release();}catch(e){}wl=null;}
-  try{speechSynthesis.cancel();}catch(e){}
   clearRoute();q.value='';$('#clr').style.display='none';
 }
 
@@ -662,7 +682,6 @@ function updateNav(p){
   $('#rem').textContent=fmtDist(remain);
   $('#eta').textContent=new Date(Date.now()+remT*1000).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',hour12:false});
   $('#spd').textContent=Math.round(state.speed*3.6);
-  voice(nxt,dNext);
   if(pr.dist<35){
     const sp=routePoint(pr.prog),ah=routePoint(Math.min(R.total,pr.prog+18));
     return {pos:sp,head:hav(sp,ah)>2?bearing(sp,ah):state.heading};
@@ -675,14 +694,6 @@ function routePoint(d){
   while(hi-lo>1){const m=(lo+hi)>>1;if(cum[m]<=d)lo=m;else hi=m;}
   const l=cum[hi]-cum[lo]||1,t=(d-cum[lo])/l;
   return [c[lo][0]+(c[hi][0]-c[lo][0])*t,c[lo][1]+(c[hi][1]-c[lo][1])*t];
-}
-function voice(nxt,d){
-  const key=l=>state.idx+':'+l;
-  const name=nxt.name?' на '+nxt.name:'';
-  const txt=instr(nxt).toLowerCase();
-  if(d<=35){if(!state.spoken[key(0)]){state.spoken[key(0)]=state.spoken[key(1)]=state.spoken[key(2)]=1;say(instr(nxt)+name);}}
-  else if(d<=130){if(!state.spoken[key(1)]){state.spoken[key(1)]=state.spoken[key(2)]=1;say('Через '+Math.round(d/10)*10+' метров '+txt+name);}}
-  else if(d<=420){if(!state.spoken[key(2)]){state.spoken[key(2)]=1;say('Через '+Math.round(d/50)*50+' метров '+txt+name);}}
 }
 function navStartCam(){
   const sp=state.speed*3.6,zt=sp<15?17.6:sp<45?16.8:sp<80?16:15.2;
@@ -718,14 +729,13 @@ async function reroute(){
   toast('Перестраиваю маршрут');
   try{
     const r=await fetchRoute(state.pos,[state.dest.lng,state.dest.lat]);
-    R=r;state.idx=0;state.spoken={};laneSig='';drawRoute(r);say('Маршрут перестроен');
+    R=r;state.idx=0;laneSig='';drawRoute(r);
   }catch(e){}
   state.rerouting=false;
 }
 let arrT=false;
 function arrived(){
   if(arrT)return;arrT=true;
-  say('Вы прибыли в пункт назначения');
   $('#mIcon').innerHTML=iconSVG({maneuver:{type:'arrive'}});
   $('#lanes').classList.remove('show');
   $('#mDist').textContent='0 м';$('#mText').textContent='Вы прибыли';$('#mStreet').textContent=state.dest?'▸ '+state.dest.name:'';
@@ -758,6 +768,68 @@ $('#sim').onclick=()=>{
 $('#spd').onclick=()=>{if(!state.sim)return;state.simSpeed=state.simSpeed===16?30:state.simSpeed===30?8:16;};
 
 /* ============ КНОПКИ ============ */
+
+/* ============ СОХРАНЁННЫЕ МЕСТА ============ */
+const FAV_KEY='ghostline_places';
+function loadFavs(){try{const a=JSON.parse(localStorage.getItem(FAV_KEY)||'[]');return Array.isArray(a)?a:[];}catch(e){return[];}}
+function storeFavs(a){try{localStorage.setItem(FAV_KEY,JSON.stringify(a));return true;}catch(e){toast('Не удалось сохранить: память браузера недоступна');return false;}}
+function favIndex(d){return loadFavs().findIndex(f=>hav([f.lng,f.lat],[d.lng,d.lat])<25);}
+function refreshSave(){
+  const on=!!(state.dest&&favIndex(state.dest)>=0);
+  $('#saveBtn').classList.toggle('on',on);
+  $('#saveBtn span').textContent=on?'Сохранено':'Сохранить';
+}
+const modal=$('#modal');
+function closeModal(){modal.className='';modal.innerHTML='';}
+function mk(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e;}
+function openNameModal(title,init,onOk){
+  modal.innerHTML='';modal.className='show';
+  const box=mk('div','mbox panel');
+  box.appendChild(mk('div','mt',title));
+  const inp=mk('input');inp.id='mname';inp.maxLength=40;inp.value=init||'';inp.placeholder='Название (например, Дом)';inp.autocomplete='off';
+  box.appendChild(inp);
+  const row=mk('div','mrow2');
+  const ok=mk('button','btn','Сохранить'),no=mk('button','btn alt','Отмена');
+  ok.onclick=()=>onOk(inp.value.trim()||init||'Без названия');
+  no.onclick=closeModal;
+  inp.addEventListener('keydown',e=>{if(e.key==='Enter')ok.onclick();});
+  row.append(no,ok);box.appendChild(row);modal.appendChild(box);
+  setTimeout(()=>{inp.focus();inp.select();},60);
+}
+function openFavs(){
+  modal.innerHTML='';modal.className='show';
+  const box=mk('div','mbox panel');box.appendChild(mk('div','mt','МОИ МЕСТА'));
+  const list=mk('div','flist'),a=loadFavs();
+  if(!a.length)list.appendChild(mk('div','fnone','Пока пусто. Построй маршрут и нажми «Сохранить».'));
+  a.forEach((f,i)=>{
+    const row=mk('div','fav'),main=mk('div','fmain');
+    main.appendChild(mk('div','fn',f.name));if(f.sub)main.appendChild(mk('div','fs',f.sub));
+    main.onclick=()=>{closeModal();q.value=f.name;startPreview({name:f.name,sub:f.sub||'',lng:f.lng,lat:f.lat});};
+    const ed=mk('button','fb','✎'),del=mk('button','fb','✕');
+    ed.onclick=()=>openNameModal('ПЕРЕИМЕНОВАТЬ',f.name,v=>{const b=loadFavs();if(b[i]){b[i].name=v;storeFavs(b);}openFavs();});
+    del.onclick=()=>{if(!confirm('Удалить «'+f.name+'»?'))return;const b=loadFavs();b.splice(i,1);storeFavs(b);openFavs();refreshSave();};
+    row.append(main,ed,del);list.appendChild(row);
+  });
+  box.appendChild(list);
+  const close=mk('button','btn alt','Закрыть');close.onclick=closeModal;box.appendChild(close);
+  modal.appendChild(box);
+}
+$('#favs').onclick=openFavs;
+modal.addEventListener('click',e=>{if(e.target===modal)closeModal();});
+$('#saveBtn').onclick=()=>{
+  const d=state.dest;if(!d)return;
+  const i=favIndex(d);
+  if(i>=0){
+    const a=loadFavs();
+    openNameModal('ПЕРЕИМЕНОВАТЬ',a[i].name,v=>{a[i].name=v;storeFavs(a);d.name=v;$('#pName').textContent=v;closeModal();toast('Сохранено');refreshSave();});
+    return;
+  }
+  openNameModal('СОХРАНИТЬ МЕСТО',d.name,v=>{
+    const a=loadFavs();a.unshift({name:v,sub:d.sub||'',lng:d.lng,lat:d.lat});
+    if(storeFavs(a)){d.name=v;$('#pName').textContent=v;toast('Место сохранено');}
+    closeModal();refreshSave();
+  });
+};
 
 /* ============ ЗАГРУЗКА ============ */
 syncStack();addEventListener('resize',syncStack);
